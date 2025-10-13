@@ -1,8 +1,12 @@
 import * as React from 'react';
-import type { IDataProvider, Org } from '../data/IDataProvider';
-
-type HashQuery = { [key: string]: string | undefined };
-type HashNavigate = (path: string, qs?: HashQuery) => void;
+import type { IDataProvider } from '../data/IDataProvider';
+import type { HashNavigate, HashQuery } from './navigation';
+import HomePage from './pages/HomePage';
+import FinderPage from './pages/FinderPage';
+import Company360Page from './pages/Company360Page';
+import NetworkPage from './pages/NetworkPage';
+import RadarPage from './pages/RadarPage';
+import TriagePage from './pages/TriagePage';
 
 interface HashRouteState {
   path: string;
@@ -106,280 +110,77 @@ export const useHashRoute = (): { path: string; qs: URLSearchParams; nav: HashNa
   );
 };
 
-const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
+const parseList = (value: string | undefined): string[] => {
+  if (value === undefined || value === '') {
+    return [];
   }
-  if (typeof error === 'string') {
-    return error;
-  }
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return 'Unknown error';
-  }
-};
-
-const HomePage: React.FC<{
-  orgs: Org[];
-  loading: boolean;
-  error?: string;
-  onNavigate: HashNavigate;
-}> = ({ orgs, loading, error, onNavigate }) => {
-  if (loading) {
-    return <div>Loading organizations…</div>;
-  }
-
-  if (error) {
-    return (
-      <div role="alert">
-        Failed to load organizations: {error}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h1>Direct Air Capture tracker</h1>
-      <p>
-        Tracking <strong>{orgs.length}</strong> organizations.
-      </p>
-      <ul>
-        {orgs.slice(0, 5).map(org => (
-          <li key={org.id}>
-            <button type="button" onClick={() => onNavigate(`/org/${org.slug}`)}>
-              {org.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map(item => trim(item))
+        .filter(Boolean)
+    )
   );
 };
-
-const FinderPage: React.FC<{
-  orgs: Org[];
-  loading: boolean;
-  error?: string;
-  query: string;
-  onQueryChange: (next: string) => void;
-  onNavigate: HashNavigate;
-}> = ({ orgs, loading, error, query, onQueryChange, onNavigate }) => {
-  const filtered = React.useMemo(() => {
-    const term = trim(query.toLowerCase());
-    if (!term) {
-      return orgs;
-    }
-    return orgs.filter(org => {
-      const haystack = `${org.name} ${org.approach || ''} ${org.country || ''}`.toLowerCase();
-      return haystack.indexOf(term) !== -1;
-    });
-  }, [orgs, query]);
-
-  if (loading) {
-    return <div>Searching organizations…</div>;
-  }
-
-  if (error) {
-    return (
-      <div role="alert">
-        Failed to load organizations: {error}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h1>Finder</h1>
-      <label htmlFor="finder-query">
-        Search
-        <input
-          id="finder-query"
-          type="search"
-          value={query}
-          onChange={event => onQueryChange(event.target.value)}
-          placeholder="Search by name, approach, or country"
-        />
-      </label>
-      <p>{filtered.length} matches</p>
-      <ul>
-        {filtered.map(org => (
-          <li key={org.id}>
-            <button type="button" onClick={() => onNavigate(`/org/${org.slug}`)}>
-              {org.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-const Company360Page: React.FC<{ slug: string; provider: IDataProvider; onNavigate: HashNavigate }> = ({
-  slug,
-  provider,
-  onNavigate
-}) => {
-  const [org, setOrg] = React.useState<Org | undefined>(undefined);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-
-  React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(undefined);
-
-    provider
-      .getEntityBySlug(slug)
-      .then(result => {
-        if (!active) {
-          return;
-        }
-        setOrg(result);
-        setLoading(false);
-      })
-      .catch(err => {
-        if (!active) {
-          return;
-        }
-        setError(getErrorMessage(err));
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [provider, slug]);
-
-  if (loading) {
-    return <div>Loading {slug}…</div>;
-  }
-
-  if (error) {
-    return (
-      <div role="alert">
-        Failed to load organization: {error}
-      </div>
-    );
-  }
-
-  if (!org) {
-    return (
-      <div>
-        <p>Organization not found.</p>
-        <button type="button" onClick={() => onNavigate('/')}>
-          Back to overview
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <button type="button" onClick={() => onNavigate('/')}>
-        ← Back
-      </button>
-      <h1>{org.name}</h1>
-      <p>{org.description || 'No description available.'}</p>
-      <dl>
-        <dt>Country</dt>
-        <dd>{org.country || '—'}</dd>
-        <dt>Stage</dt>
-        <dd>{org.stage}</dd>
-        <dt>Approach</dt>
-        <dd>{org.approach || '—'}</dd>
-        <dt>Total funding (USD)</dt>
-        <dd>{org.totalFundingUsd ? org.totalFundingUsd.toLocaleString() : '—'}</dd>
-      </dl>
-    </div>
-  );
-};
-
-const PlaceholderPage: React.FC<{ title: string }> = ({ title }) => (
-  <div>
-    <h1>{title}</h1>
-    <p>Content coming soon.</p>
-  </div>
-);
 
 const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   const { path, qs, nav } = useHashRoute();
-  const [orgs, setOrgs] = React.useState<Org[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | undefined>(undefined);
-
-  React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(undefined);
-    provider
-      .searchEntities()
-      .then(results => {
-        if (!active) {
-          return;
-        }
-        setOrgs(results);
-        setLoading(false);
-      })
-      .catch(err => {
-        if (!active) {
-          return;
-        }
-        setError(getErrorMessage(err));
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [provider]);
-
   const normalizedPath = path || '/';
-  const finderQuery = qs.get('q') || '';
 
-  const handleFinderQueryChange = React.useCallback(
-    (value: string) => {
-      nav('/finder', trim(value) ? { q: value } : undefined);
-    },
-    [nav]
-  );
+  const finderQuery = qs.get('q') || '';
+  const finderStages = parseList(qs.get('stage') ?? undefined);
+  const finderApproaches = parseList(qs.get('approach') ?? undefined);
+  const finderRegions = parseList(qs.get('region') ?? undefined);
 
   let content: React.ReactNode;
 
   if (normalizedPath === '/') {
-    content = <HomePage orgs={orgs} loading={loading} error={error} onNavigate={nav} />;
+    content = <HomePage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/finder') {
     content = (
       <FinderPage
-        orgs={orgs}
-        loading={loading}
-        error={error}
+        provider={provider}
         query={finderQuery}
-        onQueryChange={handleFinderQueryChange}
+        stages={finderStages}
+        approaches={finderApproaches}
+        regions={finderRegions}
         onNavigate={nav}
       />
     );
-  } else if (normalizedPath.length > 5 && normalizedPath.substr(0, 5) === '/org/') {
-    const slug = decodeURIComponent(normalizedPath.substring(5));
-    content = <Company360Page slug={slug} provider={provider} onNavigate={nav} />;
+  } else if (normalizedPath.startsWith('/org/')) {
+    const slug = decodeURIComponent(normalizedPath.substring('/org/'.length));
+    content = <Company360Page provider={provider} slug={slug} onNavigate={nav} />;
   } else if (normalizedPath === '/network') {
-    content = <PlaceholderPage title="Network" />;
+    content = <NetworkPage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/radar') {
-    content = <PlaceholderPage title="Radar" />;
+    content = <RadarPage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/triage') {
-    content = <PlaceholderPage title="Triage" />;
+    content = <TriagePage onNavigate={nav} />;
   } else {
     content = (
-      <div>
-        <h1>Not found</h1>
-        <button type="button" onClick={() => nav('/')}>
-          Back to home
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <h1 style={{ margin: 0 }}>Not found</h1>
+        <button
+          type="button"
+          onClick={() => nav('/')}
+          style={{
+            alignSelf: 'flex-start',
+            background: '#2563eb',
+            color: '#ffffff',
+            padding: '6px 12px',
+            borderRadius: 8,
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Back home
         </button>
       </div>
     );
   }
 
-  return <div>{content}</div>;
+  return <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>{content}</div>;
 };
 
 export default App;

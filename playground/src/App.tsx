@@ -1,10 +1,11 @@
 import * as React from 'react';
-import MockDashboard from '../../src/webparts/dacDashboard/components/MockDashboard';
+import AppShell from '../../src/webparts/dacDashboard/components/App';
+import MockProvider from '../../src/webparts/dacDashboard/data/MockProvider';
 
-const App: React.FC = () => (
-  <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-    <MockDashboard />
-  </div>
-);
-
-export default App;
+export default function App() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+      <AppShell provider={new MockProvider()} />
+    </div>
+  );
+}
