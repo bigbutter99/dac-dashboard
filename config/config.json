@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "dac-dashboard-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/dacDashboard/DacDashboardWebPart.js",
+          "manifest": "./src/webparts/dacDashboard/DacDashboardWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "DacDashboardWebPartStrings": "lib/webparts/dacDashboard/loc/{locale}.js"
+  }
+}

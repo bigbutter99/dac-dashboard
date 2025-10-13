@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "dac-dashboard-client-side-solution",
+    "id": "7bb87a7b-4b86-4d90-a637-6020f61a3d55",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.18.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "dac-dashboard description"
+      },
+      "longDescription": {
+        "default": "dac-dashboard description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "dac-dashboard Feature",
+        "description": "The feature that activates elements of the dac-dashboard solution.",
+        "id": "1581b2e4-24db-46c6-bc2f-11f857026b2c",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/dac-dashboard.sppkg"
+  }
+}

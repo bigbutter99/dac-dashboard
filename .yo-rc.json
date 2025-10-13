@@ -1,0 +1,21 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "18.19.1",
+    "sdksVersions": {
+      "@microsoft/microsoft-graph-client": "3.0.2",
+      "@microsoft/teams-js": "2.12.0"
+    },
+    "version": "1.18.2",
+    "libraryName": "dac-dashboard",
+    "libraryId": "7bb87a7b-4b86-4d90-a637-6020f61a3d55",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "dac-dashboard",
+    "solutionShortDescription": "dac-dashboard description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

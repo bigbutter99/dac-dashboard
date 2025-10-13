@@ -1,0 +1,26 @@
+{
+  "name": "dac-dashboard-playground",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fluentui/react": "^8.106.4",
+    "lucide-react": "^0.452.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "recharts": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.68",
+    "@types/react-dom": "^17.0.26",
+    "@vitejs/plugin-react": "^4.2.1",
+    "sass": "^1.75.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10"
+  }
+}
