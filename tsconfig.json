@@ -10,6 +10,7 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "skipLibCheck": true,
+    "strict": true,
     "outDir": "lib",
     "inlineSources": false,
     "noImplicitAny": true,
@@ -31,5 +32,12 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx"
+  ],
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/__mocks__/**",
+    "playground/**",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }
