@@ -575,6 +575,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 .table thead {
@@ -596,6 +597,35 @@
 .tableCell {
   padding: 10px 0;
   color: var(--dac-color-body);
+  word-break: break-word;
+}
+
+.table th:first-child,
+.table td:first-child {
+  width: 38%;
+}
+
+.heatmapGrid {
+  display: grid;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+
+.heatmapHeader {
+  font-weight: 600;
+  color: var(--dac-color-slate);
+}
+
+.heatmapRowLabel {
+  font-weight: 500;
+  color: var(--dac-color-body);
+  display: flex;
+  align-items: center;
+}
+
+.heatmapCell {
+  display: flex;
+  align-items: center;
 }
 
 .heatCell {
@@ -606,6 +636,8 @@
   justify-content: center;
   font-weight: 500;
   color: var(--dac-color-body);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .footer {

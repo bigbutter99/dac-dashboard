@@ -192,6 +192,35 @@ const COLORS = {
 
 
 
+interface AxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: {
+    value: string;
+  };
+}
+
+const FundingAxisTick: React.FC<AxisTickProps> = ({ x = 0, y = 0, payload }) => {
+  const raw = payload?.value ?? '';
+  const segments = raw.split(' ');
+  const lines =
+    segments.length > 2
+      ? [segments.slice(0, segments.length - 1).join(' '), segments[segments.length - 1]]
+      : segments;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text textAnchor="middle" fill={COLORS.slate} fontSize={12}>
+        {lines.map((line, index) => (
+          <tspan key={`${raw}-${index}`} x={0} dy={index === 0 ? 0 : 14}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+};
+
 const guessClaimChangeDate = (claim: Claim): string => claim?.evidence?.[0]?.date ?? '2024-01-01';
 
 const formatMoney = (value: number): string => `$${(value / 1_000_000).toFixed(0)}M`;
@@ -736,6 +765,14 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
     [companies]
   );
 
+  const heatmapColumns = React.useMemo(() => {
+    const base = 'minmax(220px, 2.4fr)';
+    if (stages.length === 0) {
+      return base;
+    }
+    return `${base} repeat(${stages.length}, minmax(0, 1fr))`;
+  }, [stages]);
+
   return (
     <div className={styles.main}>
       <div className={styles.kpiGrid}>
@@ -757,7 +794,14 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
                 }))}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis
+                  dataKey="name"
+                  interval={0}
+                  height={64}
+                  tick={<FundingAxisTick />}
+                  tickMargin={12}
+                  tickLine={false}
+                />
                 <YAxis unit="M" />
                 <Tooltip formatter={(value: number) => `${value}M`} />
                 <Legend />
@@ -766,44 +810,41 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
             </ResponsiveContainer>
           </div>
         </Card>
-        <Card title="Approach × Stage heatmap (mock)">
+        <Card title="Approach × Stage heatmap (grid)">
           <div className={styles.cardList}>
             <div className={styles.subtleText}>
               Distribution of observed companies by DAC approach and commercialization stage.
             </div>
             <div>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Approach</th>
-                    {stages.map(stage => (
-                      <th key={stage}>{stage}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {approaches.map(approach => (
-                    <tr key={approach} className={styles.tableRow}>
-                      <td className={styles.tableCell}>{approach}</td>
-                      {stages.map(stage => {
-                        const count = companies.filter(
-                          company => company.approach === approach && company.stage === stage
-                        ).length;
-                        const background = count ? `${COLORS.brand}22` : '#f1f5f9';
-                        const border = count ? `${COLORS.brand}33` : '#e2e8f0';
+              <div className={styles.heatmapGrid} style={{ gridTemplateColumns: heatmapColumns }}>
+                <div className={styles.heatmapHeader}>Approach</div>
+                {stages.map(stage => (
+                  <div key={`stage-${stage}`} className={styles.heatmapHeader}>
+                    {stage}
+                  </div>
+                ))}
 
-                        return (
-                          <td key={`${approach}-${stage}`} className={styles.tableCell}>
-                            <div className={styles.heatCell} style={{ background, border: `1px solid ${border}` }}>
-                              {count || ''}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                {approaches.map(approach => (
+                  <React.Fragment key={approach}>
+                    <div className={styles.heatmapRowLabel}>{approach}</div>
+                    {stages.map(stage => {
+                      const count = companies.filter(
+                        company => company.approach === approach && company.stage === stage
+                      ).length;
+                      const background = count ? `${COLORS.brand}22` : '#f1f5f9';
+                      const border = count ? `${COLORS.brand}33` : '#e2e8f0';
+
+                      return (
+                        <div key={`${approach}-${stage}`} className={styles.heatmapCell}>
+                          <div className={styles.heatCell} style={{ background, border: `1px solid ${border}` }}>
+                            {count || ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
           </div>
         </Card>
@@ -2261,6 +2302,11 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
 };
 
 const MockDashboard: React.FC = () => {
+  React.useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[MockDashboard.tsx] rendering updated heatmap view');
+  }, []);
+
   const [tab, setTab] = React.useState<TabId>('home');
   const [viewMode, setViewMode] = React.useState<'dashboard' | 'brief'>('dashboard');
   const [mode, setMode] = React.useState<'read' | 'curator'>('read');
