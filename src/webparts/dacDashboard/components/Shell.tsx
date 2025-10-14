@@ -6,6 +6,7 @@ export interface ShellProps {
   onAskAI: () => void;
   onOpenDrafts: () => void;
   isCurator: boolean;
+  draftsDrawer?: React.ReactNode;
 }
 
 const headerStyle: React.CSSProperties = {
@@ -70,7 +71,7 @@ const secondaryButtonStyle: React.CSSProperties = {
   background: '#0f172a'
 };
 
-export const Shell: React.FC<ShellProps> = ({ children, onSearch, onAskAI, onOpenDrafts, isCurator }) => {
+export const Shell: React.FC<ShellProps> = ({ children, onSearch, onAskAI, onOpenDrafts, isCurator, draftsDrawer }) => {
   const [searchInput, setSearchInput] = React.useState<string>('');
 
   const handleKeyDown = React.useCallback(
@@ -130,6 +131,7 @@ export const Shell: React.FC<ShellProps> = ({ children, onSearch, onAskAI, onOpe
         </div>
       </header>
       <main style={mainStyle}>{children}</main>
+      {draftsDrawer}
     </div>
   );
 };

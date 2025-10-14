@@ -8,6 +8,7 @@ import NetworkPage from './pages/NetworkPage';
 import RadarPage from './pages/RadarPage';
 import TriagePage from './pages/TriagePage';
 import Shell from './Shell';
+import ProposedChangesDrawer from './ProposedChangesDrawer';
 
 interface HashRouteState {
   path: string;
@@ -127,6 +128,7 @@ const parseList = (value: string | undefined): string[] => {
 
 const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   const { path, qs, nav } = useHashRoute();
+  const [draftsOpen, setDraftsOpen] = React.useState<boolean>(false);
   const normalizedPath = path || '/';
 
   const finderQuery = qs.get('q') || '';
@@ -150,7 +152,11 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   }, []);
 
   const handleOpenDrafts = React.useCallback(() => {
-    console.log('[Shell] Proposed changes requested');
+    setDraftsOpen(true);
+  }, []);
+
+  const handleCloseDrafts = React.useCallback(() => {
+    setDraftsOpen(false);
   }, []);
 
   const isCurator = true;
@@ -203,7 +209,20 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   }
 
   return (
-    <Shell onSearch={handleGlobalSearch} onAskAI={handleAskAI} onOpenDrafts={handleOpenDrafts} isCurator={isCurator}>
+    <Shell
+      onSearch={handleGlobalSearch}
+      onAskAI={handleAskAI}
+      onOpenDrafts={handleOpenDrafts}
+      isCurator={isCurator}
+      draftsDrawer={
+        <ProposedChangesDrawer
+          provider={provider}
+          isOpen={draftsOpen}
+          onClose={handleCloseDrafts}
+          isCurator={isCurator}
+        />
+      }
+    >
       {content}
     </Shell>
   );
