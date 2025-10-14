@@ -9,6 +9,8 @@ import RadarPage from './pages/RadarPage';
 import TriagePage from './pages/TriagePage';
 import Shell from './Shell';
 import ProposedChangesDrawer from './ProposedChangesDrawer';
+import AskAIDrawer from './AskAIDrawer';
+import type { AskAiContext } from '../data/IDataProvider';
 
 interface HashRouteState {
   path: string;
@@ -129,6 +131,8 @@ const parseList = (value: string | undefined): string[] => {
 const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   const { path, qs, nav } = useHashRoute();
   const [draftsOpen, setDraftsOpen] = React.useState<boolean>(false);
+  const [aiOpen, setAiOpen] = React.useState<boolean>(false);
+  const [aiContext, setAiContext] = React.useState<AskAiContext | undefined>(undefined);
   const normalizedPath = path || '/';
 
   const finderQuery = qs.get('q') || '';
@@ -148,7 +152,7 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   );
 
   const handleAskAI = React.useCallback(() => {
-    console.log('[Shell] Ask AI requested');
+    setAiOpen(true);
   }, []);
 
   const handleOpenDrafts = React.useCallback(() => {
@@ -158,10 +162,19 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   const handleCloseDrafts = React.useCallback(() => {
     setDraftsOpen(false);
   }, []);
+  const handleCloseAskAI = React.useCallback(() => {
+    setAiOpen(false);
+  }, []);
 
   const isCurator = true;
 
   let content: React.ReactNode;
+
+  React.useEffect(() => {
+    if (!normalizedPath.startsWith('/org/')) {
+      setAiContext(undefined);
+    }
+  }, [normalizedPath]);
 
   if (normalizedPath === '/') {
     content = <HomePage provider={provider} onNavigate={nav} />;
@@ -178,7 +191,20 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
     );
   } else if (normalizedPath.startsWith('/org/')) {
     const slug = decodeURIComponent(normalizedPath.substring('/org/'.length));
-    content = <Company360Page provider={provider} slug={slug} onNavigate={nav} />;
+    content = (
+      <Company360Page
+        provider={provider}
+        slug={slug}
+        onNavigate={nav}
+        onOrgResolved={org => {
+          if (org) {
+            setAiContext({ entityId: org.id });
+          } else {
+            setAiContext(undefined);
+          }
+        }}
+      />
+    );
   } else if (normalizedPath === '/network') {
     content = <NetworkPage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/radar') {
@@ -214,6 +240,7 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
       onAskAI={handleAskAI}
       onOpenDrafts={handleOpenDrafts}
       isCurator={isCurator}
+      askAiDrawer={<AskAIDrawer provider={provider} isOpen={aiOpen} onClose={handleCloseAskAI} context={aiContext} />}
       draftsDrawer={
         <ProposedChangesDrawer
           provider={provider}

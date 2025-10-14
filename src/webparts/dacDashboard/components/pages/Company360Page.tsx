@@ -14,6 +14,7 @@ interface Company360PageProps {
   provider: IDataProvider;
   slug: string;
   onNavigate: HashNavigate;
+  onOrgResolved?: (org: Org | undefined) => void;
 }
 
 const pageStyle: React.CSSProperties = {
@@ -53,7 +54,7 @@ const panelsGridStyle: React.CSSProperties = {
   gap: 16
 };
 
-export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, onNavigate }) => {
+export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, onNavigate, onOrgResolved }) => {
   const [org, setOrg] = React.useState<Org | undefined>(undefined);
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [claims, setClaims] = React.useState<Claim[]>([]);
@@ -69,6 +70,9 @@ export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, 
     setLoading(true);
     setError(undefined);
     setOrg(undefined);
+    if (onOrgResolved) {
+      onOrgResolved(undefined);
+    }
 
     provider
       .getEntityBySlug(slug)
@@ -79,10 +83,16 @@ export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, 
         if (!foundOrg) {
           setError('Organization not found.');
           setLoading(false);
+          if (onOrgResolved) {
+            onOrgResolved(undefined);
+          }
           return;
         }
 
         setOrg(foundOrg);
+        if (onOrgResolved) {
+          onOrgResolved(foundOrg);
+        }
 
         try {
           const [projectsResult, claimsResult, relationsResult, documentsResult, directoryResult] = await Promise.all([
@@ -124,13 +134,19 @@ export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, 
         }
         setError(err instanceof Error ? err.message : String(err));
         setLoading(false);
+        if (onOrgResolved) {
+          onOrgResolved(undefined);
+        }
       });
 
     return () => {
       active = false;
       controller.abort();
+      if (onOrgResolved) {
+        onOrgResolved(undefined);
+      }
     };
-  }, [provider, slug]);
+  }, [onOrgResolved, provider, slug]);
 
   if (loading) {
     return <div>Loading company dossier…</div>;
