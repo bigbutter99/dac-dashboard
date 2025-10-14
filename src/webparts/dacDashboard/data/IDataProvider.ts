@@ -78,7 +78,7 @@ export interface Org {
   slug: string;
   entityType: EntityType.Org;
   name: string;
-  orgKind: 'technology_vendor' | 'buyer' | 'storage_partner' | 'research_partner';
+  orgKind: 'technology_vendor' | 'buyer' | 'storage_partner' | 'research_partner' | 'major' | 'startup' | 'lab' | 'mrv';
   stage: Stage;
   approach: string;
   description?: string;

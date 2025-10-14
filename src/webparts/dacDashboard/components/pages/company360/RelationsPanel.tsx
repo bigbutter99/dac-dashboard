@@ -3,12 +3,35 @@ import type { Org, Relation } from '../../../data/IDataProvider';
 import { Card } from '../../primitives/Card';
 import { formatDate } from './utils';
 import { Trust } from '../../../data/IDataProvider';
+import { Badge, type BadgeTone } from '../../primitives/Badge';
 
 interface RelationsPanelProps {
   orgId: string;
   relations: Relation[];
   directory: Record<string, Org>;
 }
+
+const resolveKindBadge = (org?: Org): { label: string; tone: BadgeTone } | undefined => {
+  if (!org) {
+    return undefined;
+  }
+  switch (org.orgKind) {
+    case 'major':
+    case 'buyer':
+      return { label: 'Major', tone: 'info' };
+    case 'technology_vendor':
+    case 'startup':
+      return { label: 'Startup', tone: 'success' };
+    case 'research_partner':
+    case 'lab':
+      return { label: 'Lab', tone: 'warning' };
+    case 'storage_partner':
+    case 'mrv':
+      return { label: 'MRV', tone: 'neutral' };
+    default:
+      return undefined;
+  }
+};
 
 export const RelationsPanel: React.FC<RelationsPanelProps> = ({ orgId, relations, directory }) => {
   const groups = React.useMemo(() => {
@@ -36,11 +59,15 @@ export const RelationsPanel: React.FC<RelationsPanelProps> = ({ orgId, relations
                 {groups[type].map(relation => {
                   const counterpartyId = relation.sourceId === orgId ? relation.targetId : relation.sourceId;
                   const counterparty = directory[counterpartyId];
+                  const badge = resolveKindBadge(counterparty);
                   return (
                     <div key={relation.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <strong style={{ fontSize: 15 }}>
-                        {counterparty ? counterparty.name : `Unknown entity (${counterpartyId})`}
-                      </strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <strong style={{ fontSize: 15 }}>
+                          {counterparty ? counterparty.name : `Unknown entity (${counterpartyId})`}
+                        </strong>
+                        {badge ? <Badge tone={badge.tone}>{badge.label}</Badge> : null}
+                      </div>
                       <span style={{ fontSize: 13, color: '#475569' }}>
                         Since {formatDate(relation.since)} · Confidence {relation.confidence ?? Trust.Unknown}
                       </span>
