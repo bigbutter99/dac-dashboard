@@ -6,24 +6,24 @@ export interface ShellProps {
   onAskAI: () => void;
   onOpenDrafts: () => void;
   isCurator: boolean;
-  draftsDrawer?: React.ReactNode;
-  askAiDrawer?: React.ReactNode;
 }
+
+const rootStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: '100vh',
+  backgroundColor: '#f8fafc'
+};
 
 const headerStyle: React.CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-  padding: '16px 24px',
-  borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
-  background: '#ffffff'
-};
-
-const topRowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 16,
   justifyContent: 'space-between',
-  gap: 16
+  alignItems: 'center',
+  padding: '16px 24px',
+  backgroundColor: '#ffffff',
+  borderBottom: '1px solid rgba(15, 23, 42, 0.08)'
 };
 
 const brandStyle: React.CSSProperties = {
@@ -32,7 +32,7 @@ const brandStyle: React.CSSProperties = {
   gap: 4
 };
 
-const navStyle: React.CSSProperties = {
+const searchRowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8
@@ -44,104 +44,76 @@ const actionsStyle: React.CSSProperties = {
   gap: 8
 };
 
-const layoutStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  minHeight: '100%',
-  background: '#f8fafc'
-};
-
 const mainStyle: React.CSSProperties = {
   flex: 1,
   padding: 24
 };
 
-const buttonStyle: React.CSSProperties = {
+const primaryButton: React.CSSProperties = {
   borderRadius: 8,
-  border: '1px solid rgba(15, 23, 42, 0.1)',
-  background: '#1d4ed8',
+  border: '1px solid rgba(37, 99, 235, 0.45)',
+  backgroundColor: '#2563eb',
   color: '#ffffff',
-  padding: '8px 12px',
-  fontSize: 14,
+  padding: '8px 16px',
   fontWeight: 600,
   cursor: 'pointer'
 };
 
-const secondaryButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  background: '#0f172a'
+const secondaryButton: React.CSSProperties = {
+  ...primaryButton,
+  backgroundColor: '#0f172a'
 };
 
-export const Shell: React.FC<ShellProps> = ({
-  children,
-  onSearch,
-  onAskAI,
-  onOpenDrafts,
-  isCurator,
-  draftsDrawer,
-  askAiDrawer
-}) => {
-  const [searchInput, setSearchInput] = React.useState<string>('');
+export const Shell: React.FC<ShellProps> = ({ children, onSearch, onAskAI, onOpenDrafts, isCurator }) => {
+  const [searchValue, setSearchValue] = React.useState<string>('');
 
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        const trimmed = searchInput.trim();
-        onSearch(trimmed);
-      }
-    },
-    [onSearch, searchInput]
-  );
+  const runSearch = React.useCallback(() => {
+    onSearch(searchValue.trim());
+  }, [onSearch, searchValue]);
 
   return (
-    <div style={layoutStyle}>
+    <div style={rootStyle}>
       <header style={headerStyle}>
-        <div style={topRowStyle}>
-          <div style={brandStyle}>
-            <strong style={{ fontSize: 18, color: '#0f172a' }}>Direct Air Capture Intelligence</strong>
-            <span style={{ fontSize: 13, color: '#475569' }}>Signals, diligence, and operations in one workspace.</span>
-          </div>
-          <div style={navStyle}>
-            <input
-              type="search"
-              value={searchInput}
-              onChange={event => setSearchInput(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search organizations, projects, relations..."
-              style={{
-                minWidth: 280,
-                padding: '8px 12px',
-                borderRadius: 999,
-                border: '1px solid rgba(15, 23, 42, 0.16)',
-                fontSize: 14
-              }}
-            />
-            <button
-              type="button"
-              style={buttonStyle}
-              onClick={() => {
-                const trimmed = searchInput.trim();
-                onSearch(trimmed);
-              }}
-            >
-              Search
+        <div style={brandStyle}>
+          <strong style={{ fontSize: 18, color: '#0f172a' }}>Direct Air Capture workspace</strong>
+          <span style={{ fontSize: 13, color: '#475569' }}>Track portfolio execution, counterparties, and risk signals.</span>
+        </div>
+        <div style={searchRowStyle}>
+          <input
+            type="search"
+            value={searchValue}
+            placeholder="Search organizations, regions, approaches…"
+            onChange={event => setSearchValue(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                runSearch();
+              }
+            }}
+            style={{
+              minWidth: 260,
+              padding: '8px 12px',
+              borderRadius: 999,
+              border: '1px solid rgba(15, 23, 42, 0.16)',
+              fontSize: 14
+            }}
+          />
+          <button type="button" style={primaryButton} onClick={runSearch}>
+            Search
+          </button>
+        </div>
+        <div style={actionsStyle}>
+          <button type="button" style={secondaryButton} onClick={onAskAI}>
+            Ask AI
+          </button>
+          {isCurator ? (
+            <button type="button" style={primaryButton} onClick={onOpenDrafts}>
+              Proposed Changes
             </button>
-          </div>
-          <div style={actionsStyle}>
-            <button type="button" style={secondaryButtonStyle} onClick={onAskAI}>
-              Ask AI
-            </button>
-            {isCurator ? (
-              <button type="button" style={buttonStyle} onClick={onOpenDrafts}>
-                Proposed Changes
-              </button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </header>
       <main style={mainStyle}>{children}</main>
-      {askAiDrawer}
-      {draftsDrawer}
     </div>
   );
 };

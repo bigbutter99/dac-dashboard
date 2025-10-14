@@ -8,10 +8,6 @@ import NetworkPage from './pages/NetworkPage';
 import RadarPage from './pages/RadarPage';
 import TriagePage from './pages/TriagePage';
 import Shell from './Shell';
-import ProposedChangesDrawer from './ProposedChangesDrawer';
-import AskAIDrawer from './AskAIDrawer';
-import type { AskAiContext } from '../data/IDataProvider';
-import useTelemetry from './hooks/useTelemetry';
 
 interface HashRouteState {
   path: string;
@@ -130,66 +126,30 @@ const parseList = (value: string | undefined): string[] => {
 };
 
 const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
-  const telemetry = useTelemetry();
   const { path, qs, nav } = useHashRoute();
-  const [draftsOpen, setDraftsOpen] = React.useState<boolean>(false);
-  const [aiOpen, setAiOpen] = React.useState<boolean>(false);
-  const [aiContext, setAiContext] = React.useState<AskAiContext | undefined>(undefined);
   const normalizedPath = path || '/';
 
-  const trackedNav = React.useCallback<HashNavigate>(
-    (nextPath, nextQs) => {
-      const normalized = normalizePath(nextPath);
-      const params = buildParams(nextQs);
-      telemetry.track('nav', { to: normalized, qs: params.toString() || undefined });
-      nav(nextPath, nextQs);
+  const handleGlobalSearch = React.useCallback(
+    (query: string) => {
+      const trimmed = trim(query);
+      if (trimmed) {
+        nav('/finder', { q: trimmed });
+      } else {
+        nav('/finder');
+      }
     },
-    [nav, telemetry]
+    [nav]
   );
 
   const finderQuery = qs.get('q') || '';
   const finderStages = parseList(qs.get('stage') ?? undefined);
   const finderApproaches = parseList(qs.get('approach') ?? undefined);
   const finderRegions = parseList(qs.get('region') ?? undefined);
-  const handleGlobalSearch = React.useCallback(
-    (query: string) => {
-      const trimmed = trim(query);
-      if (trimmed) {
-        trackedNav('/finder', { q: trimmed });
-      } else {
-        trackedNav('/finder');
-      }
-    },
-    [trackedNav]
-  );
-
-  const handleAskAI = React.useCallback(() => {
-    setAiOpen(true);
-  }, []);
-
-  const handleOpenDrafts = React.useCallback(() => {
-    setDraftsOpen(true);
-  }, []);
-
-  const handleCloseDrafts = React.useCallback(() => {
-    setDraftsOpen(false);
-  }, []);
-  const handleCloseAskAI = React.useCallback(() => {
-    setAiOpen(false);
-  }, []);
-
-  const isCurator = true;
 
   let content: React.ReactNode;
 
-  React.useEffect(() => {
-    if (!normalizedPath.startsWith('/org/')) {
-      setAiContext(undefined);
-    }
-  }, [normalizedPath]);
-
   if (normalizedPath === '/') {
-    content = <HomePage provider={provider} onNavigate={trackedNav} />;
+    content = <HomePage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/finder') {
     content = (
       <FinderPage
@@ -198,38 +158,25 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
         stages={finderStages}
         approaches={finderApproaches}
         regions={finderRegions}
-        onNavigate={trackedNav}
+        onNavigate={nav}
       />
     );
   } else if (normalizedPath.startsWith('/org/')) {
     const slug = decodeURIComponent(normalizedPath.substring('/org/'.length));
-    content = (
-      <Company360Page
-        provider={provider}
-        slug={slug}
-        onNavigate={trackedNav}
-        onOrgResolved={org => {
-          if (org) {
-            setAiContext({ entityId: org.id });
-          } else {
-            setAiContext(undefined);
-          }
-        }}
-      />
-    );
+    content = <Company360Page provider={provider} slug={slug} onNavigate={nav} />;
   } else if (normalizedPath === '/network') {
-    content = <NetworkPage provider={provider} onNavigate={trackedNav} />;
+    content = <NetworkPage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/radar') {
-    content = <RadarPage provider={provider} onNavigate={trackedNav} />;
+    content = <RadarPage provider={provider} onNavigate={nav} />;
   } else if (normalizedPath === '/triage') {
-    content = <TriagePage onNavigate={trackedNav} />;
+    content = <TriagePage onNavigate={nav} />;
   } else {
     content = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h1 style={{ margin: 0 }}>Not found</h1>
         <button
           type="button"
-          onClick={() => trackedNav('/')}
+          onClick={() => nav('/')}
           style={{
             alignSelf: 'flex-start',
             background: '#2563eb',
@@ -249,18 +196,15 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   return (
     <Shell
       onSearch={handleGlobalSearch}
-      onAskAI={handleAskAI}
-      onOpenDrafts={handleOpenDrafts}
-      isCurator={isCurator}
-      askAiDrawer={<AskAIDrawer provider={provider} isOpen={aiOpen} onClose={handleCloseAskAI} context={aiContext} />}
-      draftsDrawer={
-        <ProposedChangesDrawer
-          provider={provider}
-          isOpen={draftsOpen}
-          onClose={handleCloseDrafts}
-          isCurator={isCurator}
-        />
-      }
+      onAskAI={() => {
+        // eslint-disable-next-line no-console
+        console.log('[shell] Ask AI requested');
+      }}
+      onOpenDrafts={() => {
+        // eslint-disable-next-line no-console
+        console.log('[shell] Proposed changes requested');
+      }}
+      isCurator
     >
       {content}
     </Shell>
