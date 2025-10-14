@@ -7,6 +7,7 @@ import Company360Page from './pages/Company360Page';
 import NetworkPage from './pages/NetworkPage';
 import RadarPage from './pages/RadarPage';
 import TriagePage from './pages/TriagePage';
+import Shell from './Shell';
 
 interface HashRouteState {
   path: string;
@@ -132,6 +133,27 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   const finderStages = parseList(qs.get('stage') ?? undefined);
   const finderApproaches = parseList(qs.get('approach') ?? undefined);
   const finderRegions = parseList(qs.get('region') ?? undefined);
+  const handleGlobalSearch = React.useCallback(
+    (query: string) => {
+      const trimmed = trim(query);
+      if (trimmed) {
+        nav('/finder', { q: trimmed });
+      } else {
+        nav('/finder');
+      }
+    },
+    [nav]
+  );
+
+  const handleAskAI = React.useCallback(() => {
+    console.log('[Shell] Ask AI requested');
+  }, []);
+
+  const handleOpenDrafts = React.useCallback(() => {
+    console.log('[Shell] Proposed changes requested');
+  }, []);
+
+  const isCurator = true;
 
   let content: React.ReactNode;
 
@@ -180,7 +202,11 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
     );
   }
 
-  return <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>{content}</div>;
+  return (
+    <Shell onSearch={handleGlobalSearch} onAskAI={handleAskAI} onOpenDrafts={handleOpenDrafts} isCurator={isCurator}>
+      {content}
+    </Shell>
+  );
 };
 
 export default App;
