@@ -9,6 +9,7 @@ import RelationsPanel from './company360/RelationsPanel';
 import DocumentsPanel from './company360/DocumentsPanel';
 import ProjectsPanel from './company360/ProjectsPanel';
 import type { HashNavigate } from '../navigation';
+import useTelemetry from '../hooks/useTelemetry';
 
 interface Company360PageProps {
   provider: IDataProvider;
@@ -55,6 +56,7 @@ const panelsGridStyle: React.CSSProperties = {
 };
 
 export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, onNavigate, onOrgResolved }) => {
+  const telemetry = useTelemetry();
   const [org, setOrg] = React.useState<Org | undefined>(undefined);
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [claims, setClaims] = React.useState<Claim[]>([]);
@@ -198,7 +200,10 @@ export const Company360Page: React.FC<Company360PageProps> = ({ provider, slug, 
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => {
+              telemetry.track('print', { orgId: org.id });
+              window.print();
+            }}
             style={{
               background: '#0f172a',
               color: '#fff',

@@ -11,6 +11,7 @@ import Shell from './Shell';
 import ProposedChangesDrawer from './ProposedChangesDrawer';
 import AskAIDrawer from './AskAIDrawer';
 import type { AskAiContext } from '../data/IDataProvider';
+import useTelemetry from './hooks/useTelemetry';
 
 interface HashRouteState {
   path: string;
@@ -129,11 +130,22 @@ const parseList = (value: string | undefined): string[] => {
 };
 
 const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
+  const telemetry = useTelemetry();
   const { path, qs, nav } = useHashRoute();
   const [draftsOpen, setDraftsOpen] = React.useState<boolean>(false);
   const [aiOpen, setAiOpen] = React.useState<boolean>(false);
   const [aiContext, setAiContext] = React.useState<AskAiContext | undefined>(undefined);
   const normalizedPath = path || '/';
+
+  const trackedNav = React.useCallback<HashNavigate>(
+    (nextPath, nextQs) => {
+      const normalized = normalizePath(nextPath);
+      const params = buildParams(nextQs);
+      telemetry.track('nav', { to: normalized, qs: params.toString() || undefined });
+      nav(nextPath, nextQs);
+    },
+    [nav, telemetry]
+  );
 
   const finderQuery = qs.get('q') || '';
   const finderStages = parseList(qs.get('stage') ?? undefined);
@@ -143,12 +155,12 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
     (query: string) => {
       const trimmed = trim(query);
       if (trimmed) {
-        nav('/finder', { q: trimmed });
+        trackedNav('/finder', { q: trimmed });
       } else {
-        nav('/finder');
+        trackedNav('/finder');
       }
     },
-    [nav]
+    [trackedNav]
   );
 
   const handleAskAI = React.useCallback(() => {
@@ -177,7 +189,7 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
   }, [normalizedPath]);
 
   if (normalizedPath === '/') {
-    content = <HomePage provider={provider} onNavigate={nav} />;
+    content = <HomePage provider={provider} onNavigate={trackedNav} />;
   } else if (normalizedPath === '/finder') {
     content = (
       <FinderPage
@@ -186,7 +198,7 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
         stages={finderStages}
         approaches={finderApproaches}
         regions={finderRegions}
-        onNavigate={nav}
+        onNavigate={trackedNav}
       />
     );
   } else if (normalizedPath.startsWith('/org/')) {
@@ -195,7 +207,7 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
       <Company360Page
         provider={provider}
         slug={slug}
-        onNavigate={nav}
+        onNavigate={trackedNav}
         onOrgResolved={org => {
           if (org) {
             setAiContext({ entityId: org.id });
@@ -206,18 +218,18 @@ const App: React.FC<{ provider: IDataProvider }> = ({ provider }) => {
       />
     );
   } else if (normalizedPath === '/network') {
-    content = <NetworkPage provider={provider} onNavigate={nav} />;
+    content = <NetworkPage provider={provider} onNavigate={trackedNav} />;
   } else if (normalizedPath === '/radar') {
-    content = <RadarPage provider={provider} onNavigate={nav} />;
+    content = <RadarPage provider={provider} onNavigate={trackedNav} />;
   } else if (normalizedPath === '/triage') {
-    content = <TriagePage onNavigate={nav} />;
+    content = <TriagePage onNavigate={trackedNav} />;
   } else {
     content = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <h1 style={{ margin: 0 }}>Not found</h1>
         <button
           type="button"
-          onClick={() => nav('/')}
+          onClick={() => trackedNav('/')}
           style={{
             alignSelf: 'flex-start',
             background: '#2563eb',

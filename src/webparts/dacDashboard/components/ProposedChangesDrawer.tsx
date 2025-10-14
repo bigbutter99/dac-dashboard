@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { Draft, IDataProvider } from '../data/IDataProvider';
+import useTelemetry from './hooks/useTelemetry';
 
 export interface ProposedChangesDrawerProps {
   provider: IDataProvider;
@@ -153,6 +154,7 @@ const useDrafts = (provider: IDataProvider, isOpen: boolean): { drafts: Draft[];
 };
 
 export const ProposedChangesDrawer: React.FC<ProposedChangesDrawerProps> = ({ provider, isOpen, onClose, isCurator }) => {
+  const telemetry = useTelemetry();
   const { drafts, refresh, loading } = useDrafts(provider, isOpen);
   const [submitting, setSubmitting] = React.useState<string | undefined>(undefined);
 
@@ -160,13 +162,14 @@ export const ProposedChangesDrawer: React.FC<ProposedChangesDrawerProps> = ({ pr
     async (draftId: string) => {
       try {
         setSubmitting(draftId);
+        telemetry.track('approve_write', { draftId });
         await provider.approveWrite(draftId);
         refresh();
       } finally {
         setSubmitting(undefined);
       }
     },
-    [provider, refresh]
+    [provider, refresh, telemetry]
   );
 
   if (!isOpen) {

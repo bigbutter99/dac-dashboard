@@ -1,5 +1,6 @@
 import * as React from 'react';
 import type { AskAiContext, IDataProvider } from '../data/IDataProvider';
+import useTelemetry from './hooks/useTelemetry';
 
 interface AskAIDrawerProps {
   provider: IDataProvider;
@@ -81,6 +82,7 @@ const secondaryButtonStyle: React.CSSProperties = {
 };
 
 export const AskAIDrawer: React.FC<AskAIDrawerProps> = ({ provider, isOpen, onClose, context }) => {
+  const telemetry = useTelemetry();
   const [query, setQuery] = React.useState<string>('');
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
@@ -104,6 +106,7 @@ export const AskAIDrawer: React.FC<AskAIDrawerProps> = ({ provider, isOpen, onCl
     setLoading(true);
     setError(undefined);
     try {
+      telemetry.track('ask_ai_run', { query: trimmed, context });
       const response = await provider.askAI(trimmed, context);
       setResult(response);
     } catch (askError) {
@@ -111,12 +114,13 @@ export const AskAIDrawer: React.FC<AskAIDrawerProps> = ({ provider, isOpen, onCl
     } finally {
       setLoading(false);
     }
-  }, [context, provider, query]);
+  }, [context, provider, query, telemetry]);
 
   const handleProposeRelation = React.useCallback(
     async (citationKey: string) => {
       setSubmittingCitations(prev => ({ ...prev, [citationKey]: true }));
       try {
+        telemetry.track('propose_write', { kind: 'relation', citationKey });
         await provider.proposeWrite('relation', { demo: true, citationKey });
       } finally {
         setSubmittingCitations(prev => {
@@ -126,7 +130,7 @@ export const AskAIDrawer: React.FC<AskAIDrawerProps> = ({ provider, isOpen, onCl
         });
       }
     },
-    [provider]
+    [provider, telemetry]
   );
 
   if (!isOpen) {
