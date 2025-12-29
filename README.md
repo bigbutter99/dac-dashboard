@@ -2,9 +2,7 @@
 
 ## Summary
 
-Short summary on functionality and used technologies.
-
-[picture of the solution in action, if possible]
+Pilot-ready SPFx web part that renders a DAC dashboard using offline-friendly mock data and requires no Graph/AAD/API permissions.
 
 ## Used SharePoint Framework Version
 
@@ -31,16 +29,13 @@ Short summary on functionality and used technologies.
 
 ## Solution
 
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| folder name | Author details (name, company, twitter alias with link) |
+This repository contains an SPFx web part (`DAC Dashboard (Pilot)`) and a small local playground for UI iteration.
 
 ## Version history
 
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 1.1     | March 10, 2021   | Update comment  |
-| 1.0     | January 29, 2021 | Initial release |
+| Version | Date       | Comments |
+| ------- | ---------- | -------- |
+| 0.0.1   | 2025-12-28 | Initial pilot cut |
 
 ## Disclaimer
 
@@ -65,6 +60,7 @@ Short summary on functionality and used technologies.
 ### CI build artifact
 
 - GitHub Actions workflow `Ship Package` builds and uploads the `.sppkg` as an artifact named `dac-dashboard-sppkg`.
+- Admin-ready handoff doc: `docs/admin-request.md`
 
 - Clone this repository
 - Ensure that you are at the solution folder
@@ -123,9 +119,9 @@ Description of the extension that expands upon high-level summary above.
 
 This extension illustrates the following concepts:
 
-- topic 1
-- topic 2
-- topic 3
+- Pilot-friendly SPFx packaging and deterministic ship builds
+- Offline-capable mock mode (no external calls required)
+- SharePoint-only host support
 
 > Notice that better pictures and documentation will increase the sample usage and the value you are providing for others. Thanks for your submissions advance.
 
