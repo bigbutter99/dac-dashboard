@@ -190,6 +190,11 @@ const COLORS = {
   bg: '#f8fafc'
 };
 
+const MIDDOT = '\u00B7';
+const ELLIPSIS = '\u2026';
+const ENDASH = '\u2013';
+const TIMES = '\u00D7';
+
 
 
 interface AxisTickProps {
@@ -256,7 +261,7 @@ const buildTimeline = (company: Company): TimelineEvent[] => {
     events.push({
       date: project.startDate,
       type: 'project',
-      label: `${project.name} · ${project.type} @ ${project.location}`,
+      label: `${project.name} ${MIDDOT} ${project.type} @ ${project.location}`,
       icon: Factory,
       company: company.name,
       companyId: company.id
@@ -267,7 +272,7 @@ const buildTimeline = (company: Company): TimelineEvent[] => {
     events.push({
       date: interaction.date,
       type: 'interaction',
-      label: `${capitalize(interaction.type)} – ${interaction.summary}`,
+      label: `${capitalize(interaction.type)} ${ENDASH} ${interaction.summary}`,
       icon: Users,
       company: company.name,
       companyId: company.id
@@ -500,7 +505,7 @@ const hydrateCompanyFromProvider = (
   const mappedProjects = projects.map(project => ({
     name: project.name,
     type: projectTypeLabel(project.projectType),
-    location: project.location ?? '—',
+    location: project.location ?? '-',
     capacity: project.capacity_tCO2_per_year ?? 0,
     status: project.status,
     startDate: project.start_date ?? '',
@@ -766,7 +771,7 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
   );
 
   const heatmapColumns = React.useMemo(() => {
-    const base = 'minmax(220px, 2.4fr)';
+    const base = 'minmax(180px, 2.2fr)';
     if (stages.length === 0) {
       return base;
     }
@@ -810,7 +815,7 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
             </ResponsiveContainer>
           </div>
         </Card>
-        <Card title="Approach × Stage heatmap (grid)">
+        <Card title={`Approach ${TIMES} Stage heatmap (grid)`}>
           <div className={styles.cardList}>
             <div className={styles.subtleText}>
               Distribution of observed companies by DAC approach and commercialization stage.
@@ -819,7 +824,11 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
               <div className={styles.heatmapGrid} style={{ gridTemplateColumns: heatmapColumns }}>
                 <div className={styles.heatmapHeader}>Approach</div>
                 {stages.map(stage => (
-                  <div key={`stage-${stage}`} className={styles.heatmapHeader}>
+                  <div
+                    key={`stage-${stage}`}
+                    className={`${styles.heatmapHeader} ${styles.heatmapHeaderStage}`}
+                    title={stage}
+                  >
                     {stage}
                   </div>
                 ))}
@@ -873,7 +882,7 @@ const HomePage: React.FC<HomePageProps> = ({ companies, onNavigate, getLink, new
               <div>
                 <div className={styles.newsTitle}>{item.title}</div>
                 <div className={styles.newsMeta}>
-                  {new Date(item.date).toLocaleDateString()} · {item.type} · {item.source}
+                  {new Date(item.date).toLocaleDateString()} {MIDDOT} {item.type} {MIDDOT} {item.source}
                 </div>
               </div>
               <div className={styles.actionBar}>
@@ -947,10 +956,38 @@ const FinderPage: React.FC<FinderPageProps> = ({ companies, onNavigate, getLink,
     under50: false
   });
   const [showFilters, setShowFilters] = React.useState(false);
+  const filtersPanelRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     setQuery(initialQuery || '');
   }, [initialQuery]);
+
+  const hasActiveFilters = React.useMemo(
+    () => Boolean(query.trim()) || chips.approach.size > 0 || chips.stage.size > 0 || chips.pilot || chips.under50,
+    [query, chips]
+  );
+
+  const clearFilters = React.useCallback(() => {
+    setQuery('');
+    setChips({
+      approach: new Set<string>(),
+      stage: new Set<string>(),
+      pilot: false,
+      under50: false
+    });
+    setShowFilters(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (!showFilters) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const candidate = filtersPanelRef.current?.querySelector('input, button, select, textarea, a') as HTMLElement | null;
+      candidate?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [showFilters]);
 
   const approaches = React.useMemo(
     () => collectUnique(companies.map(company => company.approach)),
@@ -978,6 +1015,43 @@ const FinderPage: React.FC<FinderPageProps> = ({ companies, onNavigate, getLink,
     });
   }, [companies, query, chips]);
 
+  const appliedFilters = React.useMemo(() => {
+    const items: Array<{ key: string; label: string; onRemove: () => void }> = [];
+    const trimmedQuery = query.trim();
+    if (trimmedQuery) {
+      items.push({ key: 'q', label: `Query: ${trimmedQuery}`, onRemove: () => setQuery('') });
+    }
+    chips.approach.forEach(value => {
+      items.push({
+        key: `approach:${value}`,
+        label: `Approach: ${value}`,
+        onRemove: () => {
+          const next = cloneStringSet(chips.approach);
+          next.delete(value);
+          setChips({ ...chips, approach: next });
+        }
+      });
+    });
+    chips.stage.forEach(value => {
+      items.push({
+        key: `stage:${value}`,
+        label: `Stage: ${value}`,
+        onRemove: () => {
+          const next = cloneStringSet(chips.stage);
+          next.delete(value);
+          setChips({ ...chips, stage: next });
+        }
+      });
+    });
+    if (chips.pilot) {
+      items.push({ key: 'pilot', label: 'Has active pilot', onRemove: () => setChips({ ...chips, pilot: false }) });
+    }
+    if (chips.under50) {
+      items.push({ key: 'under50', label: 'Funding < $50M', onRemove: () => setChips({ ...chips, under50: false }) });
+    }
+    return items;
+  }, [chips, query]);
+
   return (
     <div className={styles.main}>
       <div className={styles.cardList}>
@@ -989,19 +1063,44 @@ const FinderPage: React.FC<FinderPageProps> = ({ companies, onNavigate, getLink,
                 className={styles.searchInput}
                 value={query}
                 onChange={event => setQuery(event.target.value)}
-                placeholder="Search company, approach, country, concept…"
+                placeholder={`Search company, approach, country, concept${ELLIPSIS}`}
               />
             </div>
-            <button
-              type="button"
-              className={styles.secondaryButton}
-              onClick={() => setShowFilters(!showFilters)}
-              aria-expanded={showFilters}
-            >
-              <Filter size={14} /> Filters
-            </button>
+            <div className={styles.actionBar}>
+              {hasActiveFilters && (
+                <button type="button" className={styles.secondaryButton} onClick={clearFilters}>
+                  Clear
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setShowFilters(!showFilters)}
+                aria-expanded={showFilters}
+              >
+                <Filter size={14} /> Filters
+              </button>
+            </div>
           </div>
-          <div className={styles.subtleText}>Discovery chips</div>
+          <div className={styles.subtleText}>
+            Showing {results.length} of {companies.length} orgs {hasActiveFilters ? `(filters applied)` : null}
+          </div>
+          {appliedFilters.length > 0 && (
+            <div className={styles.chipRow} style={{ marginTop: 8 }} aria-label="Active filters">
+              {appliedFilters.map(filter => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  className={`${styles.chip} ${styles.chipApplied}`}
+                  onClick={filter.onRemove}
+                  aria-label={`Remove filter: ${filter.label}`}
+                  title="Remove filter"
+                >
+                  {filter.label} <span aria-hidden="true">{TIMES}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className={styles.chipRow}>
             {approaches.map(approach => (
               <Chip
@@ -1034,7 +1133,15 @@ const FinderPage: React.FC<FinderPageProps> = ({ companies, onNavigate, getLink,
             </Chip>
           </div>
           {showFilters && (
-            <div className={styles.filterPanel}>
+            <div
+              ref={filtersPanelRef}
+              className={styles.filterPanel}
+              onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  setShowFilters(false);
+                }
+              }}
+            >
               <div className={styles.filterGroup}>
                 <div className={styles.filterGroupTitle}>Stage</div>
                 {stages.map(stage => (
@@ -1094,7 +1201,7 @@ const FinderPage: React.FC<FinderPageProps> = ({ companies, onNavigate, getLink,
                   <div>
                     <div className={styles.cardTitle}>{company.name}</div>
                     <div className={styles.subtleText}>
-                      {company.approach} · {company.country}
+                      {company.approach} {MIDDOT} {company.country}
                     </div>
                   </div>
                 </div>
@@ -1153,6 +1260,11 @@ interface Company360PageProps {
 }
 
 const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, getLink, onOpenBrief, openCuratorPanel, mode }) => {
+  const scrollToSection = React.useCallback((id: string) => {
+    const node = document.getElementById(id);
+    node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const [filters, setFilters] = React.useState<Record<TimelineType, boolean>>({
     funding: true,
     project: true,
@@ -1180,6 +1292,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
 
   return (
     <div className={styles.main}>
+      <div id="dac-company-top" />
       <div className={styles.cardListItem}>
         <div className={styles.cardListHeader}>
           <div className={styles.companyHeading}>
@@ -1198,7 +1311,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
                 </a>
               </div>
               <div className={styles.subtleText}>
-                {company.approach} · {company.country} · Founded {company.founded}
+                {company.approach} {MIDDOT} {company.country} {MIDDOT} Founded {company.founded}
               </div>
             </div>
           </div>
@@ -1211,6 +1324,16 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
         <p className={`${styles.subtleText}`} style={{ marginTop: 12 }}>
           {company.description}
         </p>
+        <div className={styles.jumpNav} aria-label="Jump to sections">
+          <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-projects')}>Projects</button>
+          <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-claims')}>Claims</button>
+          <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-evidence')}>Evidence</button>
+          <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-timeline')}>Timeline</button>
+          {company.overviewImages?.length ? (
+            <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-imagery')}>Imagery</button>
+          ) : null}
+          <button type="button" className={styles.jumpButton} onClick={() => scrollToSection('dac-company-top')}>Top</button>
+        </div>
         <div className={styles.actionBar} style={{ marginTop: 12 }}>
           <button type="button" className={styles.primaryButton} onClick={() => onOpenBrief(company, false)}>
             View brief
@@ -1239,6 +1362,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
             ))}
           </div>
         </Card>
+        <div id="dac-company-projects" />
         <Card
           title="Projects & pilots"
           actions={mode === 'curator' ? <button className={styles.secondaryButton} type="button" onClick={() => openCuratorPanel({ type: 'project', orgId: company.id })}>Add project</button> : undefined}
@@ -1246,19 +1370,20 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
           <ul className={styles.listSimple}>
             {company.projects.map(project => (
               <li key={`${project.name}-${project.startDate}`}>
-                <strong>{project.name}</strong> — {project.type} in {project.location} ({project.status})
+                <strong>{project.name}</strong> {ENDASH} {project.type} in {project.location} ({project.status})
               </li>
             ))}
             {company.projects.length === 0 && <li>No projects captured yet.</li>}
           </ul>
           {operatingProjects.length > 0 && (
             <div className={styles.subtleText} style={{ marginTop: 8 }}>
-              {operatingProjects.length} project(s) operating • {pilotCount} pilot(s)
+              {operatingProjects.length} operating {MIDDOT} {pilotCount} pilot(s)
             </div>
           )}
         </Card>
       </div>
 
+      <div id="dac-company-imagery" />
       <Card
         title="Overview imagery"
         actions={mode === 'curator' ? (
@@ -1295,7 +1420,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
           <ul className={styles.listSimple}>
             {company.collaborations.map(collaboration => (
               <li key={`${collaboration.with}-${collaboration.startDate}`}>
-                <strong>{collaboration.with}</strong> · {collaboration.kind} · since {new Date(collaboration.startDate).getFullYear()}
+                <strong>{collaboration.with}</strong> {MIDDOT} {collaboration.kind} {MIDDOT} since {new Date(collaboration.startDate).getFullYear()}
               </li>
             ))}
             {company.collaborations.length === 0 && <li>No collaborations captured.</li>}
@@ -1308,7 +1433,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
           <ul className={styles.listSimple}>
             {company.interactions.map(interaction => (
               <li key={`${interaction.date}-${interaction.type}`}>
-                {new Date(interaction.date).toLocaleDateString()} · {capitalize(interaction.type)} · {interaction.summary}
+                {new Date(interaction.date).toLocaleDateString()} {MIDDOT} {capitalize(interaction.type)} {MIDDOT} {interaction.summary}
               </li>
             ))}
             {company.interactions.length === 0 && <li>No interactions recorded yet.</li>}
@@ -1316,6 +1441,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
         </Card>
       </div>
 
+      <div id="dac-company-claims" />
       <Card
         title="Claims & risk signals"
         actions={
@@ -1337,12 +1463,12 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
                 <Badge color={ragColor(claim.trust)}>{claim.trust}</Badge>
               </div>
               <div className={styles.subtleText}>
-                {claim.metricType} · {claim.min}–{claim.max} {claim.unit} (ML {claim.ml})
+                {claim.metricType} {MIDDOT} {claim.min}{ENDASH}{claim.max} {claim.unit} (ML {claim.ml})
               </div>
               <div className={styles.subtleText} style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <ShieldCheck size={14} color={COLORS.slate} />
                 Trust {claim.trustScore}/100
-                {claim.evidence.length > 0 && <span aria-hidden="true">·</span>}
+                {claim.evidence.length > 0 && <span aria-hidden="true">{MIDDOT}</span>}
                 {claim.evidence.map((evidence, index) => (
                   <a key={`${claim.id}-evidence-${index}`} href={evidence.url} className={styles.secondaryButton} target="_blank" rel="noreferrer">
                     <ExternalLink size={12} /> {capitalize(evidence.type)}
@@ -1363,6 +1489,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
       </Card>
 
       <div className={styles.gridTwo}>
+        <div id="dac-company-evidence" />
         <Card title="Evidence library">
           <ul className={styles.listSimple}>
             {company.publications.map(publication => (
@@ -1394,6 +1521,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
             )}
           </ul>
         </Card>
+        <div id="dac-company-timeline" />
         <Card
           title="Timeline recap"
           actions={
@@ -1420,7 +1548,7 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
                   </div>
                   <div className={styles.timelineCard}>
                     <div className={styles.timelineMeta}>
-                      {new Date(event.date).toLocaleDateString()} · {capitalize(event.type)}
+                      {new Date(event.date).toLocaleDateString()} {MIDDOT} {capitalize(event.type)}
                     </div>
                     <div className={styles.timelineLabel}>{event.label}</div>
                   </div>
@@ -1438,6 +1566,53 @@ const Company360Page: React.FC<Company360PageProps> = ({ company, onNavigate, ge
 };
 
 // Curator forms
+const SCRIPT_URL_PREFIX = 'javascript' + String.fromCharCode(58);
+
+const isSafeRelativeUrl = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (trimmed.charAt(0) !== '/') {
+    return false;
+  }
+  if (trimmed.length > 1 && trimmed.charAt(1) === '/') {
+    return false;
+  }
+  return true;
+};
+
+const isSafeHttpUrl = (value: string): boolean => {
+  const trimmed = value.trim();
+  try {
+    const url = new URL(trimmed);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+};
+
+const isSafeEvidenceUrl = (value: string): boolean => isSafeRelativeUrl(value) || isSafeHttpUrl(value);
+
+const isSafeImageSrc = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower.slice(0, SCRIPT_URL_PREFIX.length) === SCRIPT_URL_PREFIX) {
+    return false;
+  }
+  return (
+    lower.indexOf('data:image/') === 0 ||
+    lower.indexOf('blob:') === 0 ||
+    isSafeRelativeUrl(trimmed) ||
+    isSafeHttpUrl(trimmed)
+  );
+};
+
+const isValidSlug = (value: string): boolean => /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(value);
+
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label className={styles.filterOption}>
     <span style={{ minWidth: 110 }}>{label}</span>
@@ -1481,15 +1656,15 @@ const CuratorProjectForm: React.FC<{ onSubmit: (p: ProjectFormSubmission) => Pro
       }}
       className={styles.filterGroup}
     >
-      <Field label="Name"><input required value={p.name} onChange={e => setP({ ...p, name: e.target.value })} /></Field>
+      <Field label="Name"><input autoFocus required value={p.name} onChange={e => setP({ ...p, name: e.target.value })} /></Field>
       <Field label="Type"><input value={p.type} onChange={e => setP({ ...p, type: e.target.value })} /></Field>
       <Field label="Location"><input value={p.location} onChange={e => setP({ ...p, location: e.target.value })} /></Field>
       <Field label="Status"><input value={p.status} onChange={e => setP({ ...p, status: e.target.value })} /></Field>
       <Field label="Start date"><input type="date" value={p.startDate} onChange={e => setP({ ...p, startDate: e.target.value })} /></Field>
-      <Field label="Capacity"><input value={p.capacity} onChange={e => setP({ ...p, capacity: e.target.value })} placeholder="tCO2/yr" /></Field>
+      <Field label="Capacity"><input value={p.capacity} onChange={e => setP({ ...p, capacity: e.target.value })} placeholder="tCO2/yr" inputMode="numeric" /></Field>
       <Field label="Partners"><input value={p.partners} onChange={e => setP({ ...p, partners: e.target.value })} placeholder="Comma-separated" /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add project</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting}>{submitting ? `Saving${ELLIPSIS}` : 'Add project'}</button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setP(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1518,11 +1693,11 @@ const CuratorCollabForm: React.FC<{ onSubmit: (c: CollaborationFormState) => Pro
       }}
       className={styles.filterGroup}
     >
-      <Field label="With"><input required value={c.with} onChange={e => setC({ ...c, with: e.target.value })} /></Field>
+      <Field label="With"><input autoFocus required value={c.with} onChange={e => setC({ ...c, with: e.target.value })} /></Field>
       <Field label="Kind"><input value={c.kind} onChange={e => setC({ ...c, kind: e.target.value })} /></Field>
       <Field label="Since"><input type="date" value={c.startDate} onChange={e => setC({ ...c, startDate: e.target.value })} /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add collaboration</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting}>{submitting ? `Saving${ELLIPSIS}` : 'Add collaboration'}</button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setC(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1562,9 +1737,9 @@ const CuratorInteractionForm: React.FC<{ onSubmit: (i: InteractionFormSubmission
       <Field label="Date"><input type="date" value={i.date} onChange={e => setI({ ...i, date: e.target.value })} /></Field>
       <Field label="Type"><input value={i.type} onChange={e => setI({ ...i, type: e.target.value })} /></Field>
       <Field label="Attendees"><input value={i.attendees} onChange={e => setI({ ...i, attendees: e.target.value })} placeholder="Comma-separated" /></Field>
-      <Field label="Summary"><input value={i.summary} onChange={e => setI({ ...i, summary: e.target.value })} /></Field>
+      <Field label="Summary"><input autoFocus value={i.summary} onChange={e => setI({ ...i, summary: e.target.value })} /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add interaction</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting}>{submitting ? `Saving${ELLIPSIS}` : 'Add interaction'}</button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setI(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1609,16 +1784,22 @@ const CuratorClaimForm: React.FC<{ onSubmit: (cl: ClaimFormSubmission) => Promis
       }}
       className={styles.filterGroup}
     >
-      <Field label="Text"><input required value={c.text} onChange={e => setC({ ...c, text: e.target.value })} /></Field>
+      <Field label="Text"><input autoFocus required value={c.text} onChange={e => setC({ ...c, text: e.target.value })} /></Field>
       <Field label="Metric"><input value={c.metricType} onChange={e => setC({ ...c, metricType: e.target.value })} /></Field>
       <Field label="Unit"><input value={c.unit} onChange={e => setC({ ...c, unit: e.target.value })} /></Field>
       <Field label="Min"><input value={c.min} onChange={e => setC({ ...c, min: e.target.value })} /></Field>
       <Field label="ML"><input value={c.ml} onChange={e => setC({ ...c, ml: e.target.value })} /></Field>
       <Field label="Max"><input value={c.max} onChange={e => setC({ ...c, max: e.target.value })} /></Field>
-      <Field label="Trust"><input value={c.trust} onChange={e => setC({ ...c, trust: e.target.value as TrustLevel })} /></Field>
+      <Field label="Trust">
+        <select value={c.trust} onChange={e => setC({ ...c, trust: e.target.value as TrustLevel })}>
+          <option value="Green">Green</option>
+          <option value="Amber">Amber</option>
+          <option value="Red">Red</option>
+        </select>
+      </Field>
       <Field label="Score"><input type="number" min={0} max={100} value={c.trustScore} onChange={e => setC({ ...c, trustScore: Number(e.target.value) })} /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add claim</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting}>{submitting ? `Saving${ELLIPSIS}` : 'Add claim'}</button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setC(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1635,10 +1816,24 @@ interface EvidenceFormState {
 const CuratorEvidenceForm: React.FC<{ onSubmit: (ev: EvidenceFormState) => Promise<void> | void; onCancel: () => void; submitting?: boolean }> = ({ onSubmit, onCancel, submitting }) => {
   const initial: EvidenceFormState = { type: 'Publication', title: '', url: '', date: new Date().toISOString().slice(0, 10) };
   const [evi, setEvi] = React.useState<EvidenceFormState>(initial);
+
+  const urlError = React.useMemo(() => {
+    const value = evi.url.trim();
+    if (!value) {
+      return 'URL is required.';
+    }
+    if (!isSafeEvidenceUrl(value)) {
+      return 'Use an https:// URL or a SharePoint-relative path (starting with /).';
+    }
+    return undefined;
+  }, [evi.url]);
   return (
     <form
       onSubmit={async e => {
         e.preventDefault();
+        if (urlError) {
+          return;
+        }
         try {
           await onSubmit(evi);
           setEvi(initial);
@@ -1648,12 +1843,22 @@ const CuratorEvidenceForm: React.FC<{ onSubmit: (ev: EvidenceFormState) => Promi
       }}
       className={styles.filterGroup}
     >
-      <Field label="Type"><input value={evi.type} onChange={e => setEvi({ ...evi, type: e.target.value })} /></Field>
-      <Field label="Title"><input required value={evi.title} onChange={e => setEvi({ ...evi, title: e.target.value })} /></Field>
-      <Field label="URL"><input required value={evi.url} onChange={e => setEvi({ ...evi, url: e.target.value })} /></Field>
+      <div className={styles.formHint}>Evidence links open in a new tab.</div>
+      <Field label="Type">
+        <select value={evi.type} onChange={e => setEvi({ ...evi, type: e.target.value })}>
+          <option value="Publication">Publication</option>
+          <option value="Patent">Patent</option>
+          <option value="News">News</option>
+        </select>
+      </Field>
+      <Field label="Title"><input autoFocus required value={evi.title} onChange={e => setEvi({ ...evi, title: e.target.value })} /></Field>
+      <Field label="URL"><input required type="url" value={evi.url} onChange={e => setEvi({ ...evi, url: e.target.value })} placeholder="https://..." /></Field>
+      {urlError && <div className={styles.formError}>{urlError}</div>}
       <Field label="Date"><input type="date" value={evi.date} onChange={e => setEvi({ ...evi, date: e.target.value })} /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add evidence</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting || Boolean(urlError)}>
+          {submitting ? `Saving${ELLIPSIS}` : 'Add evidence'}
+        </button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setEvi(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1673,11 +1878,22 @@ interface ImageFormSubmission {
 const CuratorImageForm: React.FC<{ onSubmit: (img: ImageFormSubmission) => Promise<void> | void; onCancel: () => void; submitting?: boolean }> = ({ onSubmit, onCancel, submitting }) => {
   const initial: ImageFormState = { src: '', caption: '' };
   const [img, setImg] = React.useState<ImageFormState>(initial);
+
+  const srcError = React.useMemo(() => {
+    const value = img.src.trim();
+    if (!value) {
+      return 'Image source is required.';
+    }
+    if (!isSafeImageSrc(value)) {
+      return 'Use a data:image/... URI, an https:// URL, or a SharePoint-relative path (starting with /).';
+    }
+    return undefined;
+  }, [img.src]);
   return (
     <form
       onSubmit={async e => {
         e.preventDefault();
-        if (!img.src.trim()) {
+        if (srcError) {
           return;
         }
         try {
@@ -1689,10 +1905,14 @@ const CuratorImageForm: React.FC<{ onSubmit: (img: ImageFormSubmission) => Promi
       }}
       className={styles.filterGroup}
     >
-      <Field label="Image URL"><input required value={img.src} onChange={e => setImg({ ...img, src: e.target.value })} placeholder="https://..." /></Field>
+      <div className={styles.formHint}>For offline-safe mock mode, prefer `data:image/svg+xml,...`.</div>
+      <Field label="Image source"><input autoFocus required value={img.src} onChange={e => setImg({ ...img, src: e.target.value })} placeholder="data:image/svg+xml,..." /></Field>
+      {srcError && <div className={styles.formError}>{srcError}</div>}
       <Field label="Caption"><input value={img.caption} onChange={e => setImg({ ...img, caption: e.target.value })} placeholder="Optional" /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit" disabled={submitting}>Add image</button>
+        <button className={styles.primaryButton} type="submit" disabled={submitting || Boolean(srcError)}>
+          {submitting ? `Saving${ELLIPSIS}` : 'Add image'}
+        </button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setImg(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1705,6 +1925,7 @@ interface OrgFormState {
   approach: string;
   stage: string;
   country: string;
+  website: string;
   founded: string;
   description: string;
 }
@@ -1727,10 +1948,27 @@ const CuratorOrgForm: React.FC<{ onSubmit: (org: OrgFormSubmission) => void; onC
     approach: '',
     stage: '',
     country: '',
+    website: '',
     founded: new Date().getFullYear().toString(),
     description: ''
   };
   const [org, setOrg] = React.useState<OrgFormState>(initial);
+
+  const slugError = React.useMemo(() => {
+    const value = org.slug.trim();
+    if (!value) {
+      return undefined;
+    }
+    return isValidSlug(value) ? undefined : 'Slug must be lowercase letters, numbers, and hyphens.';
+  }, [org.slug]);
+
+  const websiteError = React.useMemo(() => {
+    const value = org.website.trim();
+    if (!value) {
+      return undefined;
+    }
+    return isSafeHttpUrl(value) ? undefined : 'Website must be an http(s) URL.';
+  }, [org.website]);
 
   const handleNameChange = (value: string): void => {
     setOrg(prev => ({
@@ -1753,6 +1991,7 @@ const CuratorOrgForm: React.FC<{ onSubmit: (org: OrgFormSubmission) => void; onC
           approach: org.approach,
           stage: org.stage,
           country: org.country,
+          website: org.website.trim() ? org.website.trim() : undefined,
           founded: org.founded ? Number(org.founded) : undefined,
           description: org.description
         });
@@ -1761,15 +2000,18 @@ const CuratorOrgForm: React.FC<{ onSubmit: (org: OrgFormSubmission) => void; onC
       className={styles.filterGroup}
     >
       {error && <div className={styles.subtleText} style={{ color: COLORS.red }}>{error}</div>}
-      <Field label="Name"><input required value={org.name} onChange={e => handleNameChange(e.target.value)} /></Field>
+      <Field label="Name"><input autoFocus required value={org.name} onChange={e => handleNameChange(e.target.value)} /></Field>
       <Field label="Slug"><input value={org.slug} onChange={e => setOrg({ ...org, slug: e.target.value })} placeholder="example-startup" /></Field>
+      {slugError && <div className={styles.formError}>{slugError}</div>}
       <Field label="Approach"><input value={org.approach} onChange={e => setOrg({ ...org, approach: e.target.value })} /></Field>
       <Field label="Stage"><input value={org.stage} onChange={e => setOrg({ ...org, stage: e.target.value })} /></Field>
       <Field label="Country"><input value={org.country} onChange={e => setOrg({ ...org, country: e.target.value })} /></Field>
+      <Field label="Website"><input value={org.website} onChange={e => setOrg({ ...org, website: e.target.value })} placeholder="https://..." /></Field>
+      {websiteError && <div className={styles.formError}>{websiteError}</div>}
       <Field label="Founded"><input type="number" value={org.founded} onChange={e => setOrg({ ...org, founded: e.target.value })} /></Field>
       <Field label="Description"><input value={org.description} onChange={e => setOrg({ ...org, description: e.target.value })} /></Field>
       <div className={styles.actionBar}>
-        <button className={styles.primaryButton} type="submit">Create startup</button>
+        <button className={styles.primaryButton} type="submit" disabled={Boolean(slugError) || Boolean(websiteError)}>Create startup</button>
         <button className={styles.secondaryButton} type="button" onClick={() => { setOrg(initial); onCancel(); }}>Cancel</button>
       </div>
     </form>
@@ -1915,7 +2157,7 @@ const StalenessPage: React.FC<StalenessPageProps> = ({ companies }) => {
       company.projects.forEach(project => {
         items.push({
           kind: 'Project',
-          name: `${company.name} – ${project.name}`,
+          name: `${company.name} ${ENDASH} ${project.name}`,
           fresh: daysSince(project.startDate),
           evidenceTypes: ['news']
         });
@@ -1940,7 +2182,7 @@ const StalenessPage: React.FC<StalenessPageProps> = ({ companies }) => {
 
   return (
     <div className={styles.gridTwo}>
-      <Card title="Freshness × coverage heatmap (mock)">
+      <Card title={`Freshness ${TIMES} coverage heatmap (mock)`}>
         <div className={styles.cardList}>
           {entities.map(entity => (
             <div key={entity.name} className={styles.cardListItem}>
@@ -1948,7 +2190,7 @@ const StalenessPage: React.FC<StalenessPageProps> = ({ companies }) => {
                 {entity.name}
               </div>
               <div className={styles.subtleText}>
-                Fresh {entity.fresh}d · Evidence types {entity.evidenceTypes.length}
+                Fresh {entity.fresh}d {MIDDOT} Evidence types {entity.evidenceTypes.length}
               </div>
             </div>
           ))}
@@ -1963,7 +2205,7 @@ const StalenessPage: React.FC<StalenessPageProps> = ({ companies }) => {
                   {entity.name}
                 </div>
                 <div className={styles.needsMeta}>
-                  {entity.kind} · Fresh {entity.fresh}d · Evidence {entity.evidenceTypes.length} types
+                  {entity.kind} {MIDDOT} Fresh {entity.fresh}d {MIDDOT} Evidence {entity.evidenceTypes.length} types
                 </div>
               </div>
               <button type="button" className={styles.primaryButton}>
@@ -2004,7 +2246,7 @@ const MapPage: React.FC<MapPageProps> = ({ companies, onNavigate, getLink }) => 
               projectItems.push({
                 id: `${company.id}-${project.name}`,
                 title: project.name,
-                subtitle: `${project.type} · ${project.location}`,
+                subtitle: `${project.type} ${MIDDOT} ${project.location}`,
                 companyId: company.id
               });
             });
@@ -2020,7 +2262,7 @@ const MapPage: React.FC<MapPageProps> = ({ companies, onNavigate, getLink }) => 
                 pilotItems.push({
                   id: `${company.id}-${project.name}`,
                   title: project.name,
-                  subtitle: `${company.name} · ${project.location} (${project.status})`,
+                  subtitle: `${company.name} ${MIDDOT} ${project.location} (${project.status})`,
                   companyId: company.id
                 });
               }
@@ -2032,7 +2274,7 @@ const MapPage: React.FC<MapPageProps> = ({ companies, onNavigate, getLink }) => 
         return companies.map(company => ({
           id: company.id,
           title: company.name,
-          subtitle: `${company.approach} · ${company.country}`,
+          subtitle: `${company.approach} ${MIDDOT} ${company.country}`,
           companyId: company.id
         }));
     }
@@ -2170,7 +2412,7 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
             <div>
               <h1 className={styles.briefTitle}>{company.name}</h1>
               <div className={styles.briefSubtle}>
-                {company.approach} · {company.country} · Founded {company.founded}
+                {company.approach} {MIDDOT} {company.country} {MIDDOT} Founded {company.founded}
               </div>
             </div>
           </div>
@@ -2199,7 +2441,9 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
             </div>
             <div className={styles.briefBlock}>
               <div className={styles.briefSubtle}>Projects</div>
-              <div>{company.projects.length} active · {pilotCount} pilot(s)</div>
+              <div>
+                {company.projects.length} active {MIDDOT} {pilotCount} pilot(s)
+              </div>
             </div>
             <div className={styles.briefBlock}>
               <div className={styles.briefSubtle}>Collaborations</div>
@@ -2213,7 +2457,7 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
           <ul className={styles.briefList}>
             {company.projects.map(project => (
               <li key={`${project.name}-${project.startDate}`}>
-                <strong>{project.name}</strong> — {project.type} in {project.location} ({project.status})
+                <strong>{project.name}</strong> {ENDASH} {project.type} in {project.location} ({project.status})
               </li>
             ))}
             {company.projects.length === 0 && <li>No projects captured yet.</li>}
@@ -2225,7 +2469,7 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
           <ul className={styles.briefList}>
             {company.collaborations.slice(0, 6).map(collaboration => (
               <li key={`${collaboration.with}-${collaboration.startDate}`}>
-                <strong>{collaboration.with}</strong> · {collaboration.kind} · since {new Date(collaboration.startDate).getFullYear()}
+                <strong>{collaboration.with}</strong> {MIDDOT} {collaboration.kind} {MIDDOT} since {new Date(collaboration.startDate).getFullYear()}
               </li>
             ))}
             {company.collaborations.length === 0 && <li>No collaborations captured yet.</li>}
@@ -2237,7 +2481,7 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
           <ul className={styles.briefList}>
             {company.interactions.map(interaction => (
               <li key={`${interaction.date}-${interaction.type}`}>
-                {new Date(interaction.date).toLocaleDateString()} · {capitalize(interaction.type)} · {interaction.summary}
+                {new Date(interaction.date).toLocaleDateString()} {MIDDOT} {capitalize(interaction.type)} {MIDDOT} {interaction.summary}
               </li>
             ))}
             {company.interactions.length === 0 && <li>No interactions recorded yet.</li>}
@@ -2249,8 +2493,8 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
           <ul className={styles.briefList}>
             {company.claims.map(claim => (
               <li key={claim.id}>
-                <strong>{claim.text}</strong> · {claim.metricType} ({claim.unit}) ·{' '}
-                <span style={{ color: ragColor(claim.trust) }}>{claim.trust}</span> trust · score {claim.trustScore}/100
+                <strong>{claim.text}</strong> {MIDDOT} {claim.metricType} ({claim.unit}) {MIDDOT}{' '}
+                <span style={{ color: ragColor(claim.trust) }}>{claim.trust}</span> trust {MIDDOT} score {claim.trustScore}/100
               </li>
             ))}
             {company.claims.length === 0 && <li>No claims captured.</li>}
@@ -2262,7 +2506,7 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
           <ul className={styles.briefList}>
             {timeline.map(event => (
               <li key={`${event.label}-${event.date}`}>
-                {new Date(event.date).toLocaleDateString()} · {capitalize(event.type)} · {event.label}
+                {new Date(event.date).toLocaleDateString()} {MIDDOT} {capitalize(event.type)} {MIDDOT} {event.label}
               </li>
             ))}
             {timeline.length === 0 && <li>No recent updates tracked.</li>}
@@ -2302,11 +2546,6 @@ const CompanyBrief: React.FC<CompanyBriefProps> = ({ company, onBack, getLink })
 };
 
 const MockDashboard: React.FC = () => {
-  React.useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[MockDashboard.tsx] rendering updated heatmap view');
-  }, []);
-
   const [tab, setTab] = React.useState<TabId>('home');
   const [viewMode, setViewMode] = React.useState<'dashboard' | 'brief'>('dashboard');
   const [mode, setMode] = React.useState<'read' | 'curator'>('read');
@@ -2545,7 +2784,7 @@ const MockDashboard: React.FC = () => {
                 {
                   name: projectPayload.name,
                   type: projectPayload.type ?? 'Project',
-                  location: projectPayload.location ?? '—',
+                  location: projectPayload.location ?? '-',
                   status: projectPayload.status ?? 'Planned',
                   startDate: projectPayload.startDate ?? '',
                   capacity: projectPayload.capacity ?? 0,
@@ -2773,7 +3012,9 @@ const MockDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.dashboard} style={backgroundStyle}>
-        <div className={styles.subtleText} style={{ margin: '120px auto', textAlign: 'center' }}>Loading mock data…</div>
+        <div className={styles.subtleText} style={{ margin: '120px auto', textAlign: 'center' }}>
+          Loading mock data{ELLIPSIS}
+        </div>
       </div>
     );
   }
@@ -2802,7 +3043,9 @@ const MockDashboard: React.FC = () => {
     if (!selectedCompanyRef.current) {
       return (
         <div className={styles.dashboard} style={backgroundStyle}>
-          <div className={styles.subtleText} style={{ margin: '120px auto', textAlign: 'center' }}>Loading brief…</div>
+          <div className={styles.subtleText} style={{ margin: '120px auto', textAlign: 'center' }}>
+            Loading brief{ELLIPSIS}
+          </div>
         </div>
       );
     }
@@ -2820,9 +3063,9 @@ const MockDashboard: React.FC = () => {
           <div className={styles.headerLeft}>
             <div className={styles.logo}>TE</div>
             <div>
-              <div className={styles.headerText}>CCUS Scouting — DAC (Mock)</div>
+              <div className={styles.headerText}>{`CCUS Scouting ${ENDASH} DAC (Mock)`}</div>
               <div className={styles.headerSubtitle}>
-                Power BI front-end concept · mock data · TotalEnergies-inspired UI
+                Power BI front-end concept {MIDDOT} mock data {MIDDOT} TotalEnergies-inspired UI
               </div>
             </div>
           </div>
@@ -2831,7 +3074,7 @@ const MockDashboard: React.FC = () => {
               <Search size={16} color={COLORS.slate} />
               <input
                 className={styles.searchInput}
-                placeholder="Global search…"
+                placeholder={`Global search${ELLIPSIS}`}
                 value={headerQuery}
                 onChange={e => setHeaderQuery(e.target.value)}
                 onKeyDown={e => {
