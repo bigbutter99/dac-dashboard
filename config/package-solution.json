@@ -8,18 +8,18 @@
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "developer": {
-      "name": "",
+      "name": "Internal Pilot",
       "websiteUrl": "",
       "privacyUrl": "",
       "termsOfUseUrl": "",
-      "mpnId": "Undefined-1.18.2"
+      "mpnId": ""
     },
     "metadata": {
       "shortDescription": {
-        "default": "dac-dashboard description"
+        "default": "Pilot-ready DAC dashboard web part that runs with offline mock data and requires no Graph/API permissions."
       },
       "longDescription": {
-        "default": "dac-dashboard description"
+        "default": "SPFx web part for reviewing DAC ecosystem information in a single dashboard. Designed for low-friction tenant pilots: offline-capable mock mode, no external service dependencies, and no API permission requests."
       },
       "screenshotPaths": [],
       "videoUrl": "",
