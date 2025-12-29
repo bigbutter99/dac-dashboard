@@ -7,9 +7,12 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "build": "gulp bundle",
-    "clean": "gulp clean",
-    "test": "gulp test"
+    "build": "npx gulp bundle",
+    "clean": "npx gulp clean",
+    "test": "npx gulp test",
+    "preflight:ship": "node scripts/preflight-ship.js",
+    "ship": "npm run preflight:ship && npx gulp bundle --ship && npx gulp package-solution --ship",
+    "ship:clean": "npm run preflight:ship && npx gulp clean && npx gulp bundle --ship && npx gulp package-solution --ship"
   },
   "dependencies": {
     "tslib": "2.3.1",
