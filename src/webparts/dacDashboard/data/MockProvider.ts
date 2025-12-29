@@ -19,12 +19,28 @@ import { EntityType, ProjectType, RAG, RelationType, Stage, Trust } from './IDat
 type OrgRecord = Omit<Org, 'fundingRounds' | 'interactions' | 'overviewImages'>;
 type ClaimRecord = Omit<Claim, 'evidence'>;
 
+const svgDataUri = (
+  label: string,
+  opts: { bg: string; fg: string; width: number; height: number; fontSize: number; radius?: number }
+): string => {
+  const safeLabel = label.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 3) || 'ORG';
+  const radius = typeof opts.radius === 'number' ? opts.radius : 0;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${opts.width}" height="${opts.height}" viewBox="0 0 ${opts.width} ${opts.height}"><rect width="${opts.width}" height="${opts.height}" rx="${radius}" fill="${opts.bg}"/><text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${opts.fontSize}" fill="${opts.fg}">${safeLabel}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const logoDataUri = (label: string, bg: string, fg: string): string =>
+  svgDataUri(label, { bg, fg, width: 80, height: 80, fontSize: 24, radius: 16 });
+
+const heroDataUri = (label: string, bg: string, fg: string): string =>
+  svgDataUri(label, { bg, fg, width: 900, height: 600, fontSize: 48, radius: 24 });
+
 const ORGS: OrgRecord[] = [
-  { id: 'org-climeworks', slug: 'climeworks', entityType: EntityType.Org, name: 'Climeworks', orgKind: 'technology_vendor', stage: Stage.CommercialPilot, approach: 'S-DAC (solid sorbent)', description: 'Builds modular solid-sorbent DAC plants (e.g., Orca, Mammoth). Focus on high-up-time modular arrays and renewable integration.', country: 'Switzerland', website: 'https://www.climeworks.com', foundedYear: 2009, totalFundingUsd: 850_000_000, freshnessDays: 11, aliases: ['Clime Works'], logoUrl: 'https://placehold.co/80x80/FFE5E9/7A1624?text=CL' },
-  { id: 'org-carbon-engineering', slug: 'carbon-engineering', entityType: EntityType.Org, name: 'Carbon Engineering', orgKind: 'technology_vendor', stage: Stage.Demo, approach: 'L-DAC (liquid solvent)', description: 'Liquid-solvent DAC using KOH capture and CaCO₃ calcination; large-scale partnership approach.', country: 'Canada', website: 'https://carbonengineering.com', foundedYear: 2009, totalFundingUsd: 500_000_000, freshnessDays: 23, aliases: ['CE', 'Carbon Eng'], logoUrl: 'https://placehold.co/80x80/E4F1FF/0B1D35?text=CE' },
-  { id: 'org-heirloom', slug: 'heirloom', entityType: EntityType.Org, name: 'Heirloom', orgKind: 'technology_vendor', stage: Stage.Pilot, approach: 'M-DAC (mineral looping)', description: 'Mineralization loop leveraging calcium oxide cycle; rapid carbonation surfaces with engineered trays.', country: 'USA', website: 'https://www.heirloomcarbon.com', foundedYear: 2020, totalFundingUsd: 250_000_000, freshnessDays: 6, logoUrl: 'https://placehold.co/80x80/F4F1FF/22115A?text=HE' },
-  { id: 'org-carbfix', slug: 'carbfix', entityType: EntityType.Org, name: 'Carbfix', orgKind: 'storage_partner', stage: Stage.Commercial, approach: 'CO₂ mineralization storage', description: 'Icelandic subsurface injection and mineralization operator partnering with DAC vendors.', country: 'Iceland', website: 'https://www.carbfix.com', foundedYear: 2007, freshnessDays: 14, logoUrl: 'https://placehold.co/80x80/E4FFF5/0B5730?text=CF' },
-  { id: 'org-microsoft', slug: 'microsoft', entityType: EntityType.Org, name: 'Microsoft', orgKind: 'buyer', stage: Stage.Commercial, approach: 'Corporate carbon removal procurement', description: 'Enterprise-scale offtake buyer with multi-year DAC commitments.', country: 'USA', website: 'https://www.microsoft.com', foundedYear: 1975, freshnessDays: 3, logoUrl: 'https://placehold.co/80x80/EBF4FF/1E3A8A?text=MS' }
+  { id: 'org-climeworks', slug: 'climeworks', entityType: EntityType.Org, name: 'Climeworks', orgKind: 'technology_vendor', stage: Stage.CommercialPilot, approach: 'S-DAC (solid sorbent)', description: 'Builds modular solid-sorbent DAC plants (e.g., Orca, Mammoth). Focus on high-up-time modular arrays and renewable integration.', country: 'Switzerland', website: 'https://www.climeworks.com', foundedYear: 2009, totalFundingUsd: 850_000_000, freshnessDays: 11, aliases: ['Clime Works'], logoUrl: logoDataUri('CL', '#FFE5E9', '#7A1624') },
+  { id: 'org-carbon-engineering', slug: 'carbon-engineering', entityType: EntityType.Org, name: 'Carbon Engineering', orgKind: 'technology_vendor', stage: Stage.Demo, approach: 'L-DAC (liquid solvent)', description: 'Liquid-solvent DAC using KOH capture and CaCO₃ calcination; large-scale partnership approach.', country: 'Canada', website: 'https://carbonengineering.com', foundedYear: 2009, totalFundingUsd: 500_000_000, freshnessDays: 23, aliases: ['CE', 'Carbon Eng'], logoUrl: logoDataUri('CE', '#E4F1FF', '#0B1D35') },
+  { id: 'org-heirloom', slug: 'heirloom', entityType: EntityType.Org, name: 'Heirloom', orgKind: 'technology_vendor', stage: Stage.Pilot, approach: 'M-DAC (mineral looping)', description: 'Mineralization loop leveraging calcium oxide cycle; rapid carbonation surfaces with engineered trays.', country: 'USA', website: 'https://www.heirloomcarbon.com', foundedYear: 2020, totalFundingUsd: 250_000_000, freshnessDays: 6, logoUrl: logoDataUri('HE', '#F4F1FF', '#22115A') },
+  { id: 'org-carbfix', slug: 'carbfix', entityType: EntityType.Org, name: 'Carbfix', orgKind: 'storage_partner', stage: Stage.Commercial, approach: 'CO₂ mineralization storage', description: 'Icelandic subsurface injection and mineralization operator partnering with DAC vendors.', country: 'Iceland', website: 'https://www.carbfix.com', foundedYear: 2007, freshnessDays: 14, logoUrl: logoDataUri('CF', '#E4FFF5', '#0B5730') },
+  { id: 'org-microsoft', slug: 'microsoft', entityType: EntityType.Org, name: 'Microsoft', orgKind: 'buyer', stage: Stage.Commercial, approach: 'Corporate carbon removal procurement', description: 'Enterprise-scale offtake buyer with multi-year DAC commitments.', country: 'USA', website: 'https://www.microsoft.com', foundedYear: 1975, freshnessDays: 3, logoUrl: logoDataUri('MS', '#EBF4FF', '#1E3A8A') }
 ];
 
 const FUNDING_ROUNDS: FundingRound[] = [
@@ -43,8 +59,8 @@ const INTERACTIONS: Interaction[] = [
 ];
 
 const MEDIA_ASSETS: MediaAsset[] = [
-  { id: 'media-climeworks-1', orgId: 'org-climeworks', src: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80', caption: 'Modular solid sorbent array concept (mock)' },
-  { id: 'media-carbon-engineering-1', orgId: 'org-carbon-engineering', src: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=900&q=80', caption: 'Solvent loop schematic (illustrative)' }
+  { id: 'media-climeworks-1', orgId: 'org-climeworks', src: heroDataUri('CLIMEWORKS', '#FCE9EC', '#7A1624'), caption: 'Modular solid sorbent array concept (mock)' },
+  { id: 'media-carbon-engineering-1', orgId: 'org-carbon-engineering', src: heroDataUri('CARBON', '#EAF2FF', '#0B1D35'), caption: 'Solvent loop schematic (illustrative)' }
 ];
 
 const PROJECTS: Project[] = [
